@@ -15,6 +15,9 @@ const SPEED = 230;
 const players = new Map();
 
 app.use(express.static(path.join(__dirname, "public")));
+app.get("/", (_req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
 app.get("/health", (_req, res) => res.json({ ok: true, players: players.size }));
 
 function cleanName(value) {
