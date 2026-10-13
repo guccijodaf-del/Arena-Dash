@@ -90,7 +90,7 @@ io.on("connection", socket => {
     attacker.lastAttack = now;
 
     let target = null;
-    let closest = 53;
+    let closest = 90;
 
     for (const p of players.values()) {
       if (p.id === attacker.id || !p.alive) continue;
@@ -142,6 +142,74 @@ io.on("connection", socket => {
     broadcastState();
   });
 
+socket.on("special-attack", () => {
+  const p = players.get(socket.id);
+  if (!p || !p.alive) return;
+
+  const now = Date.now();
+  if (p.lastSpecial && now - p.lastSpecial < 4000) return;
+  p.lastSpecial = now;
+
+  let dx = (p.keys.right ? 1 : 0) - (p.keys.left ? 1 : 0);
+  let dy = (p.keys.down ? 1 : 0) - (p.keys.up ? 1 : 0);
+
+  if (dx === 0 && dy === 0) dx = 1;
+  if (dx && dy) {
+    dx *= Math.SQRT1_2;
+    dy *= Math.SQRT1_2;
+  }
+
+  // Fast dash forward
+  p.x = Math.max(20, Math.min(980, p.x + dx * 115));
+  p.y = Math.max(20, Math.min(630, p.y + dy * 115));
+
+  // Damage nearby opponents
+  for (const target of players.values()) {
+    if (target.id === p.id || !target.alive) continue;
+
+    if (Math.hypot(target.x - p.x, target.y - p.y) < 85) {
+      target.health = Math.max(0, target.health - 50);
+
+      io.emit("attack-effect", {
+        x: target.x,
+        y: target.y
+      });
+
+      if (target.health === 0) {
+        target.alive = false;
+        p.score += 1;
+
+        io.emit("elimination", {
+          attackerName: p.name,
+          targetName: target.name
+        });
+
+        target.keys = {};
+
+        target.respawnTimer = setTimeout(() => {
+          const current = players.get(target.id);
+          if (!current) return;
+
+          current.x = 50 + Math.random() * 900;
+          current.y = 50 + Math.random() * 550;
+          current.health = 100;
+          current.alive = true;
+          current.respawnTimer = null;
+          broadcastState();
+        }, 2500);
+      }
+    }
+  }
+
+  io.emit("special-effect", {
+    id: p.id,
+    x: p.x,
+    y: p.y
+  });
+
+  broadcastState();
+});
+
   socket.on("disconnect", () => {
     const p = players.get(socket.id);
     if (p?.respawnTimer) clearTimeout(p.respawnTimer);
@@ -154,7 +222,7 @@ setInterval(() => {
   for (const p of players.values()) {
     if (!p.alive) continue;
 
-    const speed = 5;
+    const speed = 9;
     let dx = (p.keys.right ? 1 : 0) - (p.keys.left ? 1 : 0);
     let dy = (p.keys.down ? 1 : 0) - (p.keys.up ? 1 : 0);
 
@@ -168,7 +236,7 @@ setInterval(() => {
   }
 
   broadcastState();
-}, 50);
+}, 25);
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`Arena Dash running on port ${PORT}`);
