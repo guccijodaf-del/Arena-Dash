@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Arena Dash Battle</title><style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#121a2d;--line:#293550;--text:#eef4ff;--muted:#9eacc8;--accent:#5eead4;--danger:#fb7185}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#172746,#0b1020 58%);color:var(--text);font-family:system-ui,Segoe UI,Arial,sans-serif}
+.wrap{max-width:1200px;margin:auto;padding:24px 16px 40px}header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px;flex-wrap:wrap}h1{margin:0;font-size:clamp(26px,4vw,38px)}h1 span{color:var(--accent)}.subtitle{color:var(--muted);margin:6px 0 0}
+.status{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:999px;padding:9px 13px;background:#111a2c;font-size:14px;color:var(--muted)}.dot{width:9px;height:9px;border-radius:50%;background:#f87171}.dot.online{background:var(--accent);box-shadow:0 0 12px var(--accent)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 255px;gap:16px;align-items:start}.game-card,.side-card{background:rgba(18,26,45,.94);border:1px solid var(--line);border-radius:18px;overflow:hidden}.toolbar{display:flex;gap:10px;padding:13px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+input{min-width:0;flex:1;padding:11px 12px;border:1px solid #34425e;border-radius:10px;background:#0b1222;color:var(--text);font:inherit}button{border:0;background:var(--accent);color:#08201f;border-radius:10px;padding:11px 15px;font:inherit;font-weight:750;cursor:pointer}
+.canvas-wrap{padding:10px}canvas{display:block;width:100%;aspect-ratio:1000/650;border-radius:12px;background:#0b1325;touch-action:none}.help{display:flex;gap:12px;flex-wrap:wrap;padding:0 14px 15px;color:var(--muted);font-size:13px}kbd{border:1px solid #42516d;border-bottom-width:2px;border-radius:5px;padding:2px 6px;background:#18243b}
+.side-card{padding:17px}.side-card h2{font-size:16px;margin:0 0 12px}.count{color:var(--accent)}#playerList{display:grid;gap:10px;margin:0;padding:0;list-style:none}.player{display:grid;grid-template-columns:12px minmax(0,1fr) auto;align-items:center;gap:8px;font-size:13px}.swatch{width:12px;height:12px;border-radius:50%;box-shadow:0 0 10px currentColor}.player-name{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.stats{font-size:12px;color:var(--muted);text-align:right}.health{height:5px;background:#2b344a;border-radius:9px;overflow:hidden;margin-top:5px}.health span{display:block;height:100%;background:var(--accent)}
+.tip{color:var(--muted);font-size:13px;line-height:1.55;margin:18px 0 0}.attack{width:100%;margin-top:16px;background:var(--danger);color:#2a0710;padding:13px}.small{font-size:12px;color:var(--muted);margin-top:8px;text-align:center}.announcement{min-height:22px;color:#fcd34d;font-size:13px;margin-top:10px}footer{margin-top:16px;text-align:center;color:#7f8eab;font-size:12px}
+@media(max-width:850px){.layout{grid-template-columns:1fr}}
+</style></head><body><main class="wrap">
+<header><div><h1>ARENA <span>DASH BATTLE</span></h1><p class="subtitle">Move, get close, and attack. Knock out opponents to score points.</p></div><div class="status"><span class="dot" id="dot"></span><span id="status">Connecting…</span></div></header>
+<div class="layout"><section class="game-card"><div class="toolbar"><input id="nickname" maxlength="16" placeholder="Choose your nickname" aria-label="Nickname"><button id="setName">Set nickname</button></div>
+<div class="canvas-wrap"><canvas id="game" width="1000" height="650"></canvas></div>
+<div class="help"><span>Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows</span><span>Attack: <kbd>Space</kbd> or <kbd>J</kbd></span><span>Get close to an opponent to hit them.</span></div></section>
+<aside class="side-card"><h2>Players <span class="count" id="count">0</span></h2><ul id="players"></ul><button class="attack" id="attack">⚔ ATTACK</button><div class="small">Close-range attack · cooldown 650 ms</div><div class="announcement" id="notice" aria-live="polite"></div><p class="tip">Rules: each hit deals 34 damage. Players start with 100 health. A knockout earns the attacker 1 point. Knocked-out players respawn after 2.5 seconds.</p></aside></div>
+<footer>ARENA DASH BATTLE · Multiplayer prototype</footer></main>
+<script src="/socket.io/socket.io.js"></script><script>
+const socket=io(),canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+const dot=document.getElementById("dot"),status=document.getElementById("status"),nameInput=document.getElementById("nickname"),list=document.getElementById("players"),count=document.getElementById("count"),notice=document.getElementById("notice");
+let myId=null,players=[],effects=[],noticeAt=0;const keys=new Set();
+const keyMap={ArrowUp:"up",KeyW:"up",ArrowDown:"down",KeyS:"down",ArrowLeft:"left",KeyA:"left",ArrowRight:"right",KeyD:"right"};
+socket.on("connect",()=>{dot.classList.add("online");status.textContent="Connected"});socket.on("disconnect",()=>{dot.classList.remove("online");status.textContent="Reconnecting…"});
+socket.on("welcome",d=>{myId=d.id});socket.on("state",d=>{players=d.players||[];renderList()});
+socket.on("attack-effect",d=>effects.push({x:d.x,y:d.y,at:performance.now()}));
+socket.on("elimination",d=>{notice.textContent=d.attackerName+" knocked out "+d.targetName+"!";noticeAt=Date.now()});
+socket.on("hit",d=>{if(d.targetId===myId){notice.textContent="You were hit!";noticeAt=Date.now()}});
+function setName(){socket.emit("set-name",nameInput.value.trim()||"Player");nameInput.blur()}
+document.getElementById("setName").onclick=setName;nameInput.addEventListener("keydown",e=>{if(e.key==="Enter")setName()});
+function sendInput(){socket.emit("input",{up:keys.has("up"),down:keys.has("down"),left:keys.has("left"),right:keys.has("right")})}
+window.addEventListener("keydown",e=>{if(keyMap[e.code]&&document.activeElement!==nameInput){e.preventDefault();keys.add(keyMap[e.code]);sendInput()}if((e.code==="Space"||e.code==="KeyJ")&&document.activeElement!==nameInput){e.preventDefault();if(!e.repeat)socket.emit("attack")}});
+window.addEventListener("keyup",e=>{if(keyMap[e.code]){keys.delete(keyMap[e.code]);sendInput()}});window.addEventListener("blur",()=>{keys.clear();sendInput()});
+document.getElementById("attack").onclick=()=>socket.emit("attack");
+function renderList(){count.textContent=players.length;list.replaceChildren();players.slice().sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name)).forEach(p=>{
+const li=document.createElement("li");li.className="player";const sw=document.createElement("span");sw.className="swatch";sw.style.background=p.color;sw.style.color=p.color;
+const info=document.createElement("div"),name=document.createElement("div");name.className="player-name";name.textContent=p.name+(p.id===myId?" (YOU)":"");const bar=document.createElement("div");bar.className="health";const fill=document.createElement("span");fill.style.width=Math.max(0,p.health)+"%";fill.style.background=p.health<=34?"#fb7185":"#5eead4";bar.append(fill);info.append(name,bar);
+const stats=document.createElement("div");stats.className="stats";stats.textContent=(p.alive?"":"OUT · ")+p.health+" HP · "+p.score+" pts";li.append(sw,info,stats);list.append(li)})}
+function draw(){const w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);ctx.fillStyle="#0b1325";ctx.fillRect(0,0,w,h);ctx.strokeStyle="rgba(104,139,190,.12)";
+for(let x=0;x<=w;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<=h;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
+ctx.strokeStyle="rgba(94,234,212,.38)";ctx.lineWidth=3;ctx.strokeRect(2,2,w-4,h-4);const now=performance.now();effects=effects.filter(e=>now-e.at<220);
+for(const e of effects){const t=(now-e.at)/220;ctx.beginPath();ctx.arc(e.x,e.y,18+34*t,0,Math.PI*2);ctx.strokeStyle="rgba(251,113,133,"+(1-t)+")";ctx.lineWidth=4;ctx.stroke()}
+for(const p of players){ctx.save();ctx.globalAlpha=p.alive?1:.35;ctx.shadowColor=p.color;ctx.shadowBlur=p.id===myId?22:12;ctx.beginPath();ctx.arc(p.x,p.y,16,0,Math.PI*2);ctx.fillStyle=p.color;ctx.fill();ctx.shadowBlur=0;
+ctx.beginPath();ctx.arc(p.x-5,p.y-4,3,0,Math.PI*2);ctx.arc(p.x+5,p.y-4,3,0,Math.PI*2);ctx.fillStyle="#10172a";ctx.fill();if(p.id===myId){ctx.beginPath();ctx.arc(p.x,p.y,22,0,Math.PI*2);ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.stroke()}
+ctx.fillStyle="#26334d";ctx.fillRect(p.x-20,p.y+22,40,5);ctx.fillStyle=p.health<=34?"#fb7185":"#5eead4";ctx.fillRect(p.x-20,p.y+22,40*Math.max(0,p.health)/100,5);
+ctx.font="bold 14px system-ui";ctx.textAlign="center";ctx.lineWidth=4;ctx.strokeStyle="#0b1325";ctx.strokeText(p.name,p.x,p.y-27);ctx.fillStyle="#f1f5ff";ctx.fillText(p.name,p.x,p.y-27);if(!p.alive){ctx.font="bold 12px system-ui";ctx.fillStyle="#fb7185";ctx.fillText("KNOCKED OUT",p.x,p.y+43)}ctx.restore()}
+if(Date.now()-noticeAt>3500)notice.textContent="";requestAnimationFrame(draw)}draw();
+</script></body></html>
