@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1020">
+  <title>Arena Dash — Multiplayer</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b1020; --panel:#121a2d; --line:#293550; --text:#eef4ff; --muted:#9eacc8; --accent:#5eead4; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:radial-gradient(ellipse at top,#172746 0,#0b1020 58%); color:var(--text); font-family:Inter,system-ui,Segoe UI,Arial,sans-serif; }
+    .wrap { max-width:1200px; margin:0 auto; padding:24px 16px 40px; }
+    header { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:18px; flex-wrap:wrap; }
+    h1 { margin:0; font-size:clamp(26px,4vw,38px); letter-spacing:-1px; }
+    h1 span { color:var(--accent); }
+    .subtitle { color:var(--muted); margin:6px 0 0; }
+    .status { display:flex; align-items:center; gap:9px; border:1px solid var(--line); border-radius:999px; padding:9px 13px; background:#111a2c; font-size:14px; color:var(--muted); }
+    .dot { width:9px; height:9px; border-radius:50%; background:#f87171; box-shadow:0 0 12px currentColor; }
+    .dot.online { background:#5eead4; }
+    .layout { display:grid; grid-template-columns:minmax(0,1fr) 245px; gap:16px; align-items:start; }
+    .game-card,.side-card { background:rgba(18,26,45,.92); border:1px solid var(--line); border-radius:18px; overflow:hidden; box-shadow:0 18px 55px #0002; }
+    .toolbar { display:flex; gap:10px; align-items:center; padding:13px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+    input { min-width:0; flex:1; padding:11px 12px; border:1px solid #34425e; border-radius:10px; background:#0b1222; color:var(--text); font:inherit; outline:none; }
+    input:focus { border-color:var(--accent); }
+    button { border:0; background:var(--accent); color:#08201f; border-radius:10px; padding:11px 15px; font:700 14px inherit; font-weight:750; cursor:pointer; }
+    button:hover { filter:brightness(1.08); }
+    .canvas-wrap { padding:10px; }
+    canvas { display:block; width:100%; aspect-ratio:1000/650; border-radius:12px; background:#0b1325; }
+    .help { display:flex; gap:15px; flex-wrap:wrap; padding:0 14px 15px; color:var(--muted); font-size:13px; }
+    kbd { border:1px solid #42516d; border-bottom-width:2px; border-radius:5px; padding:2px 6px; color:#f0f5ff; background:#18243b; }
+    .side-card { padding:17px; }
+    .side-card h2 { font-size:16px; margin:0 0 12px; }
+    .count { color:var(--accent); font-size:13px; font-weight:700; }
+    #playerList { display:grid; gap:9px; margin:0; padding:0; list-style:none; }
+    .player { display:flex; align-items:center; gap:9px; min-width:0; font-size:14px; }
+    .swatch { width:12px; height:12px; flex:none; border-radius:50%; box-shadow:0 0 10px currentColor; }
+    .player-name { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+    .you { color:var(--accent); font-size:11px; margin-left:auto; }
+    .tip { color:var(--muted); font-size:13px; line-height:1.55; margin:18px 0 0; }
+    .empty { color:var(--muted); font-size:13px; }
+    footer { margin-top:16px; text-align:center; color:#7f8eab; font-size:12px; }
+    @media(max-width:850px) { .layout { grid-template-columns:1fr; } .side-card { order:2; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <div><h1>ARENA <span>DASH</span></h1><p class="subtitle">A tiny online world. Move around and meet other players.</p></div>
+      <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">Connecting…</span></div>
+    </header>
+    <div class="layout">
+      <section class="game-card">
+        <div class="toolbar">
+          <input id="nameInput" maxlength="16" placeholder="Choose your nickname" aria-label="Nickname">
+          <button id="joinButton">Set nickname</button>
+        </div>
+        <div class="canvas-wrap"><canvas id="game" width="1000" height="650" aria-label="Multiplayer game arena"></canvas></div>
+        <div class="help">
+          <span>Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys</span>
+          <span>Tip: open this page in another tab to test multiplayer.</span>
+        </div>
+      </section>
+      <aside class="side-card">
+        <h2>Players online <span class="count" id="playerCount">0</span></h2>
+        <ul id="playerList"><li class="empty">Waiting for players…</li></ul>
+        <p class="tip">Everyone connected to this server shares the same arena. Your movement is sent to the server, which broadcasts the world back to all players.</p>
+      </aside>
+    </div>
+    <footer>ARENA DASH · First playable version · No account needed</footer>
+  </main>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
+    const nameInput = document.getElementById("nameInput");
+    const playerList = document.getElementById("playerList");
+    const playerCount = document.getElementById("playerCount");
+    let myId = null, worldWidth = 1000, worldHeight = 650, players = [];
+    const keys = new Set();
+    const keyMap = { ArrowUp:"up", KeyW:"up", ArrowDown:"down", KeyS:"down", ArrowLeft:"left", KeyA:"left", ArrowRight:"right", KeyD:"right" };
+
+    socket.on("connect", () => {
+      statusDot.classList.add("online");
+      statusText.textContent = "Connected";
+    });
+    socket.on("disconnect", () => {
+      statusDot.classList.remove("online");
+      statusText.textContent = "Reconnecting…";
+    });
+    socket.on("welcome", data => {
+      myId = data.id; worldWidth = data.width; worldHeight = data.height;
+    });
+    socket.on("players", data => { players = data; renderPlayers(); });
+    socket.on("state", data => { players = data; renderPlayers(); });
+
+    function setName() {
+      const name = nameInput.value.trim() || "Player";
+      socket.emit("set-name", name);
+      nameInput.value = name;
+      nameInput.blur();
+    }
+    document.getElementById("joinButton").addEventListener("click", setName);
+    nameInput.addEventListener("keydown", e => { if (e.key === "Enter") setName(); });
+
+    window.addEventListener("keydown", e => {
+      if (keyMap[e.code] && document.activeElement !== nameInput) {
+        e.preventDefault(); keys.add(keyMap[e.code]); sendInput();
+      }
+    });
+    window.addEventListener("keyup", e => {
+      if (keyMap[e.code]) { keys.delete(keyMap[e.code]); sendInput(); }
+    });
+    window.addEventListener("blur", () => { keys.clear(); sendInput(); });
+    function sendInput() {
+      socket.emit("input", { up:keys.has("up"), down:keys.has("down"), left:keys.has("left"), right:keys.has("right") });
+    }
+
+    function renderPlayers() {
+      playerCount.textContent = players.length;
+      playerList.replaceChildren();
+      if (!players.length) {
+        const li = document.createElement("li"); li.className = "empty"; li.textContent = "Waiting for players…"; playerList.append(li); return;
+      }
+      players.slice().sort((a,b) => a.name.localeCompare(b.name)).forEach(p => {
+        const li = document.createElement("li"); li.className = "player";
+        const swatch = document.createElement("span"); swatch.className = "swatch"; swatch.style.background = p.color; swatch.style.color = p.color;
+        const name = document.createElement("span"); name.className = "player-name"; name.textContent = p.name;
+        li.append(swatch, name);
+        if (p.id === myId) { const you = document.createElement("span"); you.className = "you"; you.textContent = "YOU"; li.append(you); }
+        playerList.append(li);
+      });
+    }
+
+    function draw() {
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0,0,w,h);
+      ctx.fillStyle = "#0b1325"; ctx.fillRect(0,0,w,h);
+      ctx.strokeStyle = "rgba(104,139,190,.12)"; ctx.lineWidth = 1;
+      for (let x=0; x<=w; x+=40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+      for (let y=0; y<=h; y+=40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+      ctx.strokeStyle = "rgba(94,234,212,.38)"; ctx.lineWidth = 3; ctx.strokeRect(2,2,w-4,h-4);
+
+      for (const p of players) {
+        ctx.save();
+        ctx.shadowColor = p.color; ctx.shadowBlur = p.id === myId ? 24 : 12;
+        ctx.beginPath(); ctx.arc(p.x,p.y,16,0,Math.PI*2); ctx.fillStyle = p.color; ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.arc(p.x-5,p.y-4,3,0,Math.PI*2); ctx.arc(p.x+5,p.y-4,3,0,Math.PI*2); ctx.fillStyle = "#10172a"; ctx.fill();
+        if (p.id === myId) {
+          ctx.beginPath(); ctx.arc(p.x,p.y,22,0,Math.PI*2); ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.stroke();
+        }
+        ctx.font = "bold 15px system-ui, sans-serif"; ctx.textAlign = "center";
+        ctx.lineWidth = 4; ctx.strokeStyle = "#0b1325"; ctx.strokeText(p.name,p.x,p.y-27);
+        ctx.fillStyle = "#f1f5ff"; ctx.fillText(p.name,p.x,p.y-27);
+        ctx.restore();
+      }
+      if (!players.length) {
+        ctx.fillStyle = "#a5b4cf"; ctx.font = "20px system-ui"; ctx.textAlign = "center";
+        ctx.fillText("Connecting to the arena…",w/2,h/2);
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
+  </script>
+</body>
+</html>
