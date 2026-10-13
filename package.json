@@ -1,14 +1,11 @@
+
 {
-  "name": "arena-dash",
+  "name": "arena-dash-battle",
   "version": "1.0.0",
-  "description": "A beginner-friendly real-time 2D multiplayer browser game",
+  "description": "Arena Dash multiplayer battle arena",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
-  },
-  "engines": {
-    "node": ">=18"
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.21.2",
