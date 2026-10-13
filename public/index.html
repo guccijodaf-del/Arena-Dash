@@ -32,7 +32,16 @@ function setName(){socket.emit("set-name",nameInput.value.trim()||"Player");name
 document.getElementById("setName").onclick=setName;nameInput.addEventListener("keydown",e=>{if(e.key==="Enter")setName()});
 function sendInput(){socket.emit("input",{up:keys.has("up"),down:keys.has("down"),left:keys.has("left"),right:keys.has("right")})}
 window.addEventListener("keydown",e=>{if(keyMap[e.code]&&document.activeElement!==nameInput){e.preventDefault();keys.add(keyMap[e.code]);sendInput()}if((e.code==="Space"||e.code==="KeyJ")&&document.activeElement!==nameInput){e.preventDefault();if(!e.repeat)socket.emit("attack")}});
-window.addEventListener("keyup",e=>{if(keyMap[e.code]){keys.delete(keyMap[e.code]);sendInput()}});window.addEventListener("blur",()=>{keys.clear();sendInput()});
+window.addEventListener("keydown", e => {
+  if (
+    (e.code === "ShiftLeft" || e.code === "ShiftRight") &&
+    document.activeElement !== nameInput
+  ) {
+    e.preventDefault();
+    if (!e.repeat) socket.emit("special-attack");
+  }
+});
+  window.addEventListener("keyup",e=>{if(keyMap[e.code]){keys.delete(keyMap[e.code]);sendInput()}});window.addEventListener("blur",()=>{keys.clear();sendInput()});
 document.getElementById("attack").onclick=()=>socket.emit("attack");
 function renderList(){count.textContent=players.length;list.replaceChildren();players.slice().sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name)).forEach(p=>{
 const li=document.createElement("li");li.className="player";const sw=document.createElement("span");sw.className="swatch";sw.style.background=p.color;sw.style.color=p.color;
