@@ -222,7 +222,7 @@ setInterval(() => {
   for (const p of players.values()) {
     if (!p.alive) continue;
 
-    const speed = 9;
+    const speed = 12;
     let dx = (p.keys.right ? 1 : 0) - (p.keys.left ? 1 : 0);
     let dy = (p.keys.down ? 1 : 0) - (p.keys.up ? 1 : 0);
 
