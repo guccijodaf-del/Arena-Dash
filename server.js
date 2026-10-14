@@ -160,8 +160,8 @@ socket.on("special-attack", () => {
   }
 
   // Fast dash forward
-  p.x = Math.max(20, Math.min(980, p.x + dx * 115));
-  p.y = Math.max(20, Math.min(630, p.y + dy * 115));
+  p.x = Math.max(20, Math.min(1980, p.x + dx * 115));
+  p.y = Math.max(20, Math.min(1280, p.y + dy * 115));
 
   // Damage nearby opponents
   for (const target of players.values()) {
@@ -231,9 +231,9 @@ setInterval(() => {
       dy *= Math.SQRT1_2;
     }
 
-    p.x = Math.max(20, Math.min(980, p.x + dx * speed));
-    p.y = Math.max(20, Math.min(630, p.y + dy * speed));
-  }
+    p.x = Math.max(20, Math.min(1980, p.x + dx * speed));
+    p.y = Math.max(20, Math.min(1280, p.y + dy * speed));
+  }  
 
   broadcastState();
 }, 25);
