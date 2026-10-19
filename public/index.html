@@ -26,7 +26,11 @@ const socket=io(),canvas=document.getElementById("game"),ctx=canvas.getContext("
 const dot=document.getElementById("dot"),status=document.getElementById("status"),nameInput=document.getElementById("nickname"),list=document.getElementById("players"),count=document.getElementById("count"),notice=document.getElementById("notice");
 let myId=null,players=[],effects=[],noticeAt=0;const matchTimer=document.getElementById("matchTimer");
 const matchMessage=document.getElementById("matchMessage");
-let latestMatch=null;const keys=new Set();
+let latestMatch=null;
+const resultsOverlay=document.getElementById("resultsOverlay");
+const resultsWinner=document.getElementById("resultsWinner");
+const resultsScore=document.getElementById("resultsScore");
+const keys=new Set();
 const keyMap={ArrowUp:"up",KeyW:"up",ArrowDown:"down",KeyS:"down",ArrowLeft:"left",KeyA:"left",ArrowRight:"right",KeyD:"right"};
 socket.on("connect",()=>{dot.classList.add("online");status.textContent="Connected"});socket.on("disconnect",()=>{dot.classList.remove("online");status.textContent="Reconnecting…"});
 socket.on("welcome",d=>{myId=d.id});socket.on("state",d=>{
