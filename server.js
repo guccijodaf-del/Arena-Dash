@@ -241,7 +241,31 @@ setInterval(() => {
 
   broadcastState();
 }, 25);
+setInterval(() => {
+  if (!match.active || players.size === 0) return;
 
+  match.timeLeft = Math.max(0, match.timeLeft - 1);
+
+  if (match.timeLeft === 0) {
+    const ranked = [...players.values()]
+      .sort((a, b) => b.score - a.score);
+
+    if (ranked.length === 0) {
+      match.winner = null;
+    } else if (
+      ranked.length > 1 &&
+      ranked[0].score === ranked[1].score
+    ) {
+      match.winner = "DRAW";
+    } else {
+      match.winner = ranked[0].name;
+    }
+
+    match.active = false;
+  }
+
+  broadcastState();
+}, 1000);
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`Arena Dash running on port ${PORT}`);
 });
