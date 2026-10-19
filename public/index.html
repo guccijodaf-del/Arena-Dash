@@ -13,7 +13,10 @@ input{min-width:0;flex:1;padding:11px 12px;border:1px solid #34425e;border-radiu
 @media(max-width:850px){.layout{grid-template-columns:1fr}}
 </style></head><body><main class="wrap">
 <header><div><h1>ARENA <span>DASH BATTLE</span></h1><p class="subtitle">Move, get close, and attack. Knock out opponents to score points.</p></div><div class="status"><span class="dot" id="dot"></span><span id="status">Connecting…</span></div></header>
-<div class="layout"><section class="game-card"><div class="toolbar"><input id="nickname" maxlength="16" placeholder="Choose your nickname" aria-label="Nickname"><button id="setName">Set nickname</button></div>
+<div class="layout"><section class="game-card"><div class="toolbar"><div class="match-info">
+  <strong>TIME: <span id="matchTimer">3:00</span></strong>
+  <strong id="matchMessage">FIGHT!</strong>
+</div><input id="nickname" maxlength="16" placeholder="Choose your nickname" aria-label="Nickname"><button id="setName">Set nickname</button></div>
 <div class="canvas-wrap"><canvas id="game" width="2000" height="1300"></canvas></div>
 <div class="help"><span>Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows</span><span>Attack: <kbd>Space</kbd> or <kbd>J</kbd></span><span>Get close to an opponent to hit them.</span></div></section>
 <aside class="side-card"><h2>Players <span class="count" id="count">0</span></h2><ul id="players"></ul><button class="attack" id="attack">⚔ ATTACK</button><div class="small">Close-range attack · cooldown 650 ms</div><div class="announcement" id="notice" aria-live="polite"></div><p class="tip">Rules: each hit deals 34 damage. Players start with 100 health. A knockout earns the attacker 1 point. Knocked-out players respawn after 2.5 seconds.</p></aside></div>
