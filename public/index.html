@@ -64,4 +64,14 @@ ctx.lineWidth = 1;
 ctx.strokeRect(p.x - 22, p.y + 22, 44, 7);
 ctx.font="bold 14px system-ui";ctx.textAlign="center";ctx.lineWidth=4;ctx.strokeStyle="#0b1325";ctx.strokeText(p.name,p.x,p.y-27);ctx.fillStyle="#f1f5ff";ctx.fillText(p.name,p.x,p.y-27);if(!p.alive){ctx.font="bold 12px system-ui";ctx.fillStyle="#fb7185";ctx.fillText("KNOCKED OUT",p.x,p.y+43)}ctx.restore()}
 if(Date.now()-noticeAt>3500)notice.textContent="";requestAnimationFrame(draw)}draw();
-</script></body></html>
+</script>
+<div id="resultsOverlay" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(5,10,25,0.88); color:white; align-items:center; justify-content:center; text-align:center; font-family:system-ui,sans-serif;">
+  <div style="background:#17233d; border:2px solid #5eead4; border-radius:20px; padding:36px; width:min(90%,420px); box-sizing:border-box; box-shadow:0 0 40px rgba(94,234,212,0.25);">
+    <div style="font-size:44px;">🏆</div>
+    <h1 style="margin:10px 0;">MATCH OVER</h1>
+    <p id="resultsWinner" style="font-size:24px; font-weight:bold;">Winner</p>
+    <p id="resultsScore" style="color:#cbd5e1;">Final scores</p>
+    <button onclick="document.getElementById('resultsOverlay').style.display='none'" style="padding:12px 24px; border:0; border-radius:10px; background:#5eead4; color:#102033; font-weight:bold; font-size:16px; cursor:pointer;">BACK TO GAME</button>
+  </div>
+</div>
+</body></html>
