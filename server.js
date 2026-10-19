@@ -9,6 +9,9 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 const players = new Map();
+const MATCH_DURATION = 180;
+const KILL_TARGET = 5;
+let match = { timeLeft: MATCH_DURATION, active: true, winner: null };
 const colors = ["#5eead4", "#fb7185", "#60a5fa", "#facc15", "#c084fc", "#4ade80"];
 
 app.use(express.static(path.join(__dirname, "public")));
