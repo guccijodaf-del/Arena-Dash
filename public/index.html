@@ -43,6 +43,32 @@ socket.on("welcome",d=>{myId=d.id});socket.on("state",d=>{
       Math.floor(seconds/60)+":"+String(seconds%60).padStart(2,"0");
 
 if(!latestMatch.active){
+  matchMessage.textContent =
+    latestMatch.winner === "DRAW"
+      ? "IT'S A DRAW!"
+      : latestMatch.winner
+        ? latestMatch.winner + " WINS!"
+        : "MATCH OVER!";
+
+  resultsWinner.textContent =
+    latestMatch.winner === "DRAW"
+      ? "IT'S A DRAW!"
+      : latestMatch.winner || "No winner";
+
+  const ranked = [...players].sort(
+    (a, b) => b.score - a.score
+  );
+
+  resultsScore.textContent = ranked
+    .map(p => p.name + ": " + p.score + " wins")
+    .join(" | ") || "No players";
+
+  resultsOverlay.style.display = "flex";
+}else{
+  matchMessage.textContent = "FIGHT!";
+  resultsOverlay.style.display = "none";
+}
+
   if(latestMatch.winner==="DRAW"){
     matchMessage.textContent="IT'S A DRAW!";
   }else if(latestMatch.winner){
