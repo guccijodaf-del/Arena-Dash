@@ -38,13 +38,18 @@ socket.on("welcome",d=>{myId=d.id});socket.on("state",d=>{
     matchTimer.textContent=
       Math.floor(seconds/60)+":"+String(seconds%60).padStart(2,"0");
 
-    if(latestMatch.winner){
-      matchMessage.textContent=latestMatch.winner+" WINS!";
-    }else if(!latestMatch.active){
-      matchMessage.textContent="MATCH OVER!";
-    }else{
-      matchMessage.textContent="FIGHT!";
-    }
+if(!latestMatch.active){
+  if(latestMatch.winner==="DRAW"){
+    matchMessage.textContent="IT'S A DRAW!";
+  }else if(latestMatch.winner){
+    matchMessage.textContent=latestMatch.winner+" WINS!";
+  }else{
+    matchMessage.textContent="MATCH OVER!";
+  }
+}else{
+  matchMessage.textContent="FIGHT!";
+}
+
   }
 
   renderList();
