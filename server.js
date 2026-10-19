@@ -38,6 +38,7 @@ function makePlayer(id, name) {
 
 function broadcastState() {
   io.emit("state", {
+    match: { ...match },
     players: [...players.values()].map(p => ({
       id: p.id,
       name: p.name,
